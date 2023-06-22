@@ -71,6 +71,9 @@ parser.add_argument('--resume', '-r', action='store_true', help='Resume from che
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+print(f"Using {device} device")
+
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
