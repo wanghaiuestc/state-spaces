@@ -53,12 +53,13 @@ parser.add_argument('--lr', default=0.01, type=float, help='Learning rate')
 parser.add_argument('--weight_decay', default=0.01, type=float, help='Weight decay')
 # Scheduler
 # parser.add_argument('--patience', default=10, type=float, help='Patience for learning rate scheduler')
-parser.add_argument('--epochs', default=100, type=float, help='Training epochs')
+parser.add_argument('--epochs', default=1, type=float, help='Training epochs')
+parser.add_argument('--train', '-t', action='store_true', help='Perform training')
 # Dataset
 parser.add_argument('--dataset', default='cifar10', choices=['mnist', 'cifar10'], type=str, help='Dataset')
 parser.add_argument('--grayscale', action='store_true', help='Use grayscale CIFAR10')
 # Dataloader
-parser.add_argument('--num_workers', default=4, type=int, help='Number of workers to use for dataloader')
+parser.add_argument('--num_workers', default=0, type=int, help='Number of workers to use for dataloader')
 parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
 # Model
 parser.add_argument('--n_layers', default=4, type=int, help='Number of layers')
@@ -304,6 +305,7 @@ optimizer, scheduler = setup_optimizer(
 
 # Training
 def train():
+    print("Training process...\n")
     model.train()
     train_loss = 0
     correct = 0
@@ -329,6 +331,7 @@ def train():
 
 
 def eval(epoch, dataloader, checkpoint=False):
+    print("Evaluation process...\n")
     global best_acc
     model.eval()
     eval_loss = 0
@@ -362,6 +365,7 @@ def eval(epoch, dataloader, checkpoint=False):
             }
             if not os.path.isdir('checkpoint'):
                 os.mkdir('checkpoint')
+            print("Saving checkpoint...\n")
             torch.save(state, './checkpoint/ckpt.pth')
             best_acc = acc
 
@@ -373,8 +377,9 @@ for epoch in pbar:
         pbar.set_description('Epoch: %d' % (epoch))
     else:
         pbar.set_description('Epoch: %d | Val acc: %1.3f' % (epoch, val_acc))
-    train()
-    val_acc = eval(epoch, valloader, checkpoint=True)
+    if args.train:
+        train()
+        val_acc = eval(epoch, valloader, checkpoint=True)
     eval(epoch, testloader)
     scheduler.step()
     # print(f"Epoch {epoch} learning rate: {scheduler.get_last_lr()}")
