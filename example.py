@@ -53,13 +53,13 @@ parser.add_argument('--lr', default=0.01, type=float, help='Learning rate')
 parser.add_argument('--weight_decay', default=0.01, type=float, help='Weight decay')
 # Scheduler
 # parser.add_argument('--patience', default=10, type=float, help='Patience for learning rate scheduler')
-parser.add_argument('--epochs', default=1, type=float, help='Training epochs')
-parser.add_argument('--train', '-t', action='store_true', help='Perform training')
+parser.add_argument('--epochs', default=100, type=float, help='Training epochs')
+parser.add_argument('--test', '-t', action='store_true', help='Perform test without training')
 # Dataset
 parser.add_argument('--dataset', default='cifar10', choices=['mnist', 'cifar10'], type=str, help='Dataset')
 parser.add_argument('--grayscale', action='store_true', help='Use grayscale CIFAR10')
 # Dataloader
-parser.add_argument('--num_workers', default=0, type=int, help='Number of workers to use for dataloader')
+parser.add_argument('--num_workers', default=4, type=int, help='Number of workers to use for dataloader')
 parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
 # Model
 parser.add_argument('--n_layers', default=4, type=int, help='Number of layers')
@@ -239,7 +239,7 @@ model = model.to(device)
 if device == 'cuda':
     cudnn.benchmark = True
 
-if args.resume:
+if args.resume or args.test:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
@@ -247,7 +247,7 @@ if args.resume:
     model.load_state_dict(checkpoint['model'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
-
+    
 def setup_optimizer(model, lr, weight_decay, epochs):
     """
     S4 requires a specific optimizer setup.
@@ -371,16 +371,19 @@ def eval(epoch, dataloader, checkpoint=False):
 
         return acc
 
-pbar = tqdm(range(start_epoch, args.epochs))
-for epoch in pbar:
-    if epoch == 0:
-        pbar.set_description('Epoch: %d' % (epoch))
-    else:
-        pbar.set_description('Epoch: %d | Val acc: %1.3f' % (epoch, val_acc))
-    if args.train:
+if args.test:# test without training
+    eval(start_epoch, testloader)
+else:
+    pbar = tqdm(range(start_epoch, args.epochs))
+    for epoch in pbar:
+        if epoch == 0:
+            pbar.set_description('Epoch: %d' % (epoch))
+        else:
+            val_acc = eval(epoch, valloader, checkpoint=True)
+            pbar.set_description('Epoch: %d | Val acc: %1.3f' % (epoch, val_acc))
         train()
         val_acc = eval(epoch, valloader, checkpoint=True)
-    eval(epoch, testloader)
-    scheduler.step()
-    # print(f"Epoch {epoch} learning rate: {scheduler.get_last_lr()}")
+        eval(epoch, testloader)
+        scheduler.step()
+        # print(f"Epoch {epoch} learning rate: {scheduler.get_last_lr()}")
 
